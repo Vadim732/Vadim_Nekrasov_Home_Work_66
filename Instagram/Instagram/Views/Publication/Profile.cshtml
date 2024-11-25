@@ -1,0 +1,101 @@
+﻿@model User
+
+@{
+    ViewBag.Title = "User profile";
+    var publications = ViewBag.Publications as List<Publication>;
+    var currentUserId = int.Parse(ViewBag.currentUserId.ToString());
+}
+
+<div class="mt-4">
+    <div class="row align-items-center">
+        <div class="col-md-3 text-center">
+            <img src="@Model.Avatar" class="img-thumbnail avatar-block rounded-circle" alt="User avatar">
+        </div>
+        <div class="col-md-9">
+            <div class="d-flex align-items-center mb-2">
+                <h2 class="me-3">@Model.UserName</h2>
+                @if (Model.Id == currentUserId)
+                {
+                    <a asp-action="Edit" asp-controller="Account" asp-route-userId="@ViewBag.currentUserId" class="btn btn-outline-secondary">Edit profile</a>
+                    <a class="btn btn-outline-danger ml-1" asp-controller="Account" asp-action="Logout">Logout</a>
+                }
+                else
+                {
+                    <button class="btn btn-outline-danger ml-1" id="followButton">
+                        @if (ViewBag.IsFollowing)
+                        {
+                            @:Unfollow
+                        }
+                        else
+                        {
+                            @:Follow
+                        }
+                    </button>
+                }
+            </div>
+            <div class="d-flex mb-3">
+                <div class="me-4">
+                    <strong>@Model.Publications.Count</strong> publications
+                </div>
+                <div class="me-4">
+                    <strong>@Model.FollowersCount</strong> subscribers
+                </div>
+                <div>
+                    <strong>@Model.FollowingCount</strong> subscriptions
+                </div>
+            </div>
+            <div>
+                <strong>@Model.Name</strong>
+                <p>@Model.AboutUser</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="profile-card-container mt-3">
+    @if (publications != null && publications.Any())
+    {
+        foreach (var p in publications)
+        {
+            <div class="profile-card m-1" style="width: 18rem;">
+                <a asp-action="Details" asp-controller="Publication" asp-route-publicationId="@p.Id">
+                    <img src="@p.Image" class="card-img-top" alt="Publication image">
+                </a>
+            </div>
+        }
+    }
+    else
+    {
+        <h4 class="text-dark text-center">There are no publications yet :с</h4>
+    }
+</div>
+
+<script>
+    document.getElementById("followButton").addEventListener("click", function() {
+        var followingId = @Model.Id;
+        var formData = new FormData();
+        formData.append("followingId", followingId);
+
+        var actionUrl = "@(ViewBag.IsFollowing ? Url.Action("Unfollow", "Publication") : Url.Action("Follow", "Publication"))";
+        fetch(actionUrl, {
+            method: "POST",
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                var buttonText = this.innerText === "Follow" ? "Unfollow" : "Follow";
+                this.innerText = buttonText;
+                return response.json();
+            }
+            throw new Error("Error: Failed to update follow status :c");
+        })
+        .then(data => {
+            if (data.followersCount) {
+                document.querySelector(".followers-count").textContent = "${data.followersCount} subscribers";
+            }
+        })
+        .catch(error => {
+            console.error(error);
+        });
+    });
+</script>

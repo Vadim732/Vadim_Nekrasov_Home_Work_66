@@ -1,0 +1,168 @@
+﻿@model Publication
+
+@{
+    ViewBag.Title = "Details publication";
+}
+
+<div class="card my-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <a asp-action="Profile" asp-controller="Publication" asp-route-userId="@Model.User.Id" class="text-dark text-decoration-none d-flex align-items-center">
+            <img src="@Model.User.Avatar" alt="User avatar" class="rounded-circle me-2 post-user-avatar">
+            <h5 class="card-title mb-0">@Model.User.UserName</h5>
+        </a>
+        <small class="text-muted ms-auto">Created: @Model.CreatedAt.ToString("dd MMM yyyy")</small>
+    </div>
+    <img src="@Model.Image" class="card-img-top" alt="Publication image">
+    <div class="card-body">
+        <div class="d-flex align-items-center mb-2">
+            <form asp-action="ToggleLike" method="post" id="ToggleLike" class="me-2">
+                <input type="hidden" id="publicationId" name="publicationId" value="@Model.Id" />
+                <button type="submit" class="btn btn-success">
+                    &#9829; Like <strong>@Model.LikeCount</strong>
+                </button>
+            </form>
+            <button class="btn btn-light mb-0" data-bs-toggle="modal" data-bs-target="#commentModal-@Model.Id">
+                &#128172; Comment <strong>@Model.CommentCount</strong>
+            </button>
+            @if(Model.UserId == ViewBag.CurrentUserId)
+            {
+                <a asp-action="EditPost" asp-controller="Publication" asp-route-publicationId="@Model.Id" class="btn btn-secondary ml-1">Edit</a>
+                <button class="btn btn-danger ml-1 delete-post" data-publication-id="@Model.Id">Delete</button>
+            }
+        </div>
+        <p class="card-text post-description-text">@Model.Description</p>
+        <div class="mt-3 comment-block">
+            <h5 class="text-center">Comments:</h5>
+            @foreach (var comment in Model.Comments)
+            {
+                <div class="d-flex align-items-center mb-2">
+                    <a asp-action="Profile" asp-controller="Publication" asp-route-userId="@comment.User.Id" class="text-dark text-decoration-none d-flex align-items-center">
+                        <img src="@comment.User.Avatar" alt="User avatar" class="rounded-circle me-2 comment-user-avatar">
+                        <p class="mb-0">
+                            <strong>@comment.User.UserName: </strong> @comment.Text
+                        </p>
+                    </a>
+                    <small class="text-secondary ms-auto">(@comment.CreatedAt.ToString("dd MMM yyyy HH:mm"))</small>
+                    @if (comment.UserId == ViewBag.CurrentUserId)
+                    {
+                        <form asp-action="DeleteComment" method="post" class="ms-2">
+                            <input type="hidden" name="commentId" value="@comment.Id" />
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+                        </form>
+                        <button class="btn btn-outline-primary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#editCommentModal-@comment.Id">
+                            Edit
+                        </button>
+                    }
+                </div>
+                <div class="modal fade" id="editCommentModal-@comment.Id" tabindex="-1" aria-labelledby="editCommentModalLabel-@comment.Id" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="editCommentModalLabel-@comment.Id">Edit Comment</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body bg-dark">
+                                <form asp-action="EditComment" method="post">
+                                    <input type="hidden" name="commentId" value="@comment.Id" />
+                                    <div class="form-group mt-2">
+                                        <textarea name="newText" class="form-control" required>@comment.Text</textarea>
+                                    </div>
+                                    <div class="d-flex justify-content-center mt-3">
+                                        <button type="submit" class="btn btn-outline-light w-50">Save changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="commentModal-@Model.Id" tabindex="-1" aria-labelledby="commentModalLabel-@Model.Id" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="commentModalLabel-@Model.Id">Add a comment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-dark">
+                <form asp-action="AddComment" method="post">
+                    <input type="hidden" name="publicationId" value="@Model.Id" />
+                    <div class="form-group mt-2">
+                        <textarea name="text" class="form-control" placeholder="Enter your comment..." required></textarea>
+                    </div>
+                    <div class="d-flex justify-content-center mt-3">
+                        <button type="submit" class="btn btn-outline-light w-50">Send</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="delete-confirmation-modal" class="modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-dark text-white text-center">
+                <h6 class="mb-3">Are you sure you want to delete this publication?</h6>
+                <img src="@Model.Image" class="w-75 mt-2 mx-auto d-block" alt="Publication image">
+                <p><strong>@Model.Description</strong></p>
+                <div class="d-flex justify-content-center mt-3">
+                    <button id="confirm-delete" type="button" class="btn btn-danger w-50">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $(document).on("submit", 'form[id="ToggleLike"]', function (e) {
+                e.preventDefault();
+                const form = $(this);
+                const publicationId = form.find('input[id="publicationId"]').val();
+                $.ajax({
+                    url: '@Url.Action("ToggleLike")',
+                    type: "POST",
+                    data: { publicationId: publicationId },
+                    success: function (response) {
+                        if (response.success) {
+                            form.find("button").html(`&#9829; Like <strong>${response.likeCount}</strong>`);
+                        }
+                    },
+                });
+            });
+        });
+
+        $(document).ready(function () {
+            let publicationIdToDelete = null;
+            $('.delete-post').on("click", function () {
+                publicationIdToDelete = $(this).data("publication-id");
+                $('#delete-confirmation-modal').modal('show');
+            });
+            $('#confirm-delete').on("click", function () {
+                if (publicationIdToDelete) {
+                    $.ajax({
+                        url: "/Publication/DeletePostConfirmed",
+                        type: "POST",
+                        data: { publicationId: publicationIdToDelete },
+                        success: function (response) {
+                            if (response.success) {
+                                alert(response.message);
+                                location.reload();
+                            } else {
+                                alert(response.message);
+                            }
+                        },
+                    });
+                    $('#delete-confirmation-modal').modal("hide");
+                }
+            });
+        });
+    </script>
+}
